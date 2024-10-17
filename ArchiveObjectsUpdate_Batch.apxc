@@ -1,0 +1,39 @@
+/**
+    About
+    -----
+    Description:  When creating policies in privacy center we cannot refer parent fields as filter. 
+				  So we created a boolean field on all the objects and stored the object informaion in custom metaddata Archiving_Objects_Info__mdt. 
+				  This is the Batch class to update that boolean field when records will be eligible for archiving and that boolean field is used in filters in privacy center policies).
+    Create date: Oct 2024
+    Details
+    -------
+    Update History
+    --------------
+    Created Oct 2024 - Srikanth Reddy Bommani
+
+*/
+public class ArchiveObjectsUpdate_Batch implements Database.Batchable<sObject>{
+    Public List<Archiving_Objects_Info__mdt> metaDataList;
+    public ArchiveObjectsUpdate_Batch(List<Archiving_Objects_Info__mdt> archiveObjectsMetadataList){
+        metaDataList = archiveObjectsMetadataList;
+    }
+    public Database.QueryLocator start(Database.BatchableContext bc){
+//get records which are eligible for archiving using query stored in custom metaddata
+        return Database.getQueryLocator(metaDataList[0].Query__c.trim());
+    }
+    public void execute(Database.BatchableContext bc, 
+                        List<sObject> scope){
+                            for(Sobject s : scope){
+							// set the boolean flag to indicate that the record is eligible for archiving
+                                s.put(metaDataList[0].Archiving_Field_Name__c.trim(),true); 
+                            }      
+                            List<Database.SaveResult> result = Database.update(scope, false);
+                        }
+    public void finish(Database.BatchableContext bc){
+        metaDataList.remove(0);
+        if(!metaDataList.isEmpty()){
+		//If there is more than 1 object in the custom metadata list, this batch will be called recursively
+            Id batchInstanceId = Database.executeBatch(new ArchiveObjectsUpdate_Batch(metaDataList), Integer.valueof(metaDataList[0].Batch_Size__c));
+        }
+    }
+}
