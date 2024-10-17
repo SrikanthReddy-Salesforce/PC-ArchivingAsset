@@ -1,0 +1,23 @@
+/**
+    About
+    -----
+    Description: Scheduler class to get the list of objects for which archiving flag needs to be set 
+    Create date: Oct 2024
+    Details
+    -------
+    Update History
+    --------------
+    Created Oct 2024 - Srikanth Reddy Bommani
+
+*/
+public class ArchiveObjectsUpdate_SCH implements Schedulable {
+    public void execute(SchedulableContext sc) {
+        //get only the objects which are not disabled
+		//Archiving_Objects_Info__mdt is a custom metadata that stores the following - 1. SOQL query 2. Object 3. Batch size 4. Archiving field name 5. Disable status
+		List<Archiving_Objects_Info__mdt> archivingObjectsList = [SELECT Query__c, Object__c ,Batch_Size__c,Archiving_Field_Name__c ,Disable_Job__c  FROM Archiving_Objects_Info__mdt where Disable_Job__c = false ];
+        if(!archivingObjectsList.isEmpty()){
+		//Run the batch to update the Archiving flag for each object in consideration
+            Id batchInstanceId = Database.executeBatch(new ArchiveObjectsUpdate_Batch(archivingObjectsList), Integer.valueof(archivingObjectsList[0].Batch_Size__c));
+        }
+    }
+}
